@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioMolAI - Precision Platform</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonts: Manrope (UI) & JetBrains Mono (Data) -->
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- 3Dmol.js -->
+    <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Manrope', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        signal: {
+                            400: '#4ade80',
+                            500: '#22c55e', // Bio-Green
+                            600: '#16a34a',
+                            900: '#14532d',
+                        },
+                        zinc: {
+                            800: '#27272a',
+                            900: '#18181b',
+                            950: '#09090b', 
+                        },
+                        void: '#050505',
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* --- CORE VISUALS --- */
+        body {
+            cursor: none; /* Hide default cursor */
+            overflow-x: hidden;
+            transition: background-color 0.5s ease;
+        }
+
+        /* Light Mode */
+        body.light { background-color: #f8fafc; color: #0f172a; }
+        
+        /* Dark Mode - Deep Void */
+        html.dark body { background-color: #020202; color: #e4e4e7; }
+
+        /* Canvas Layer */
+        #bg-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0; 
+            pointer-events: none; 
+        }
+
+        nav, main, footer { position: relative; z-index: 10; }
+
+        /* --- CUSTOM CURSOR --- */
+        #cursor-dot, #cursor-outline {
+            position: fixed;
+            top: 0; left: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            z-index: 9999;
+            pointer-events: none;
+        }
+        #cursor-dot {
+            width: 4px; height: 4px;
+            background-color: #22c55e;
+        }
+        #cursor-outline {
+            width: 20px; height: 20px;
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            transition: width 0.15s, height 0.15s, background-color 0.15s;
+        }
+        body.hovering #cursor-outline {
+            width: 40px; height: 40px;
+            background-color: rgba(34, 197, 94, 0.05);
+            border-color: #4ade80;
+        }
+
+        /* --- PREMIUM UI PANELS --- */
+        .tech-panel {
+            background-color: rgba(255, 255, 255, 0.92);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.03);
+            backdrop-filter: blur(12px);
+            transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .dark .tech-panel {
+            background-color: rgba(14, 14, 16, 0.85);
+            border: 1px solid #27272a;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Card Hover */
+        .tech-card:hover {
+            transform: translateY(-4px);
+            border-color: #22c55e;
+            box-shadow: 0 15px 30px -5px rgba(34, 197, 94, 0.1);
+        }
+        .dark .tech-card:hover {
+            box-shadow: 0 15px 40px -5px rgba(34, 197, 94, 0.08);
+        }
+
+        /* --- FORM ELEMENTS --- */
+        .input-surface {
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        .light .input-surface {
+            background-color: #f1f5f9;
+            border-color: #e2e8f0;
+            color: #1e293b;
+        }
+        .light .input-surface:focus {
+            background-color: #ffffff;
+            border-color: #22c55e;
+            box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.1);
+        }
+        .dark .input-surface {
+            background-color: #18181b;
+            border-color: #27272a;
+            color: #f4f4f5;
+        }
+        .dark .input-surface:focus {
+            background-color: #09090b;
+            border-color: #22c55e;
+            box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.3);
+        }
+
+        /* Custom Select Arrow */
+        .custom-select-wrapper { position: relative; }
+        .custom-select-wrapper::after {
+            content: '';
+            position: absolute;
+            right: 16px; top: 50%;
+            width: 8px; height: 8px;
+            border-right: 2px solid #9ca3af;
+            border-bottom: 2px solid #9ca3af;
+            transform: translateY(-70%) rotate(45deg);
+            pointer-events: none;
+        }
+
+        /* Buttons */
+        .btn-tech {
+            background-color: #1e293b;
+            color: white;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-tech:hover {
+            background-color: #0f172a;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .btn-tech:active { transform: scale(0.97); }
+
+        .dark .btn-tech {
+            background-color: #22c55e;
+            color: #022c22;
+        }
+        .dark .btn-tech:hover {
+            background-color: #4ade80;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+        }
+
+        /* 3D Viewer */
+        .mol-container {
+            width: 100%; height: 600px;
+            background: #fff;
+            border-radius: 0.75rem;
+            border: 1px solid #e2e8f0;
+            transition: border-color 0.3s;
+        }
+        .dark .mol-container {
+            background: #0e0e10; /* Slightly lighter than true void for contrast */
+            border: 1px solid #27272a;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #3f3f46; }
+        
+        input, textarea, select, button { cursor: none; }
+    </style>
+</head>
+<body class="light transition-colors duration-300 min-h-screen flex flex-col font-sans selection:bg-signal-500 selection:text-white">
+
+    <!-- REACTIVE CANVAS BACKGROUND (No Ripple, Just Proximity) -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- CUSTOM CURSOR -->
+    <div id="cursor-dot"></div>
+    <div id="cursor-outline"></div>
+
+    <!-- Navigation (Static - Scrolls Away) -->
+    <nav class="w-full h-24 flex items-center z-50 bg-transparent">
+        <div class="max-w-7xl mx-auto px-6 w-full flex justify-between items-center">
+            <!-- Logo -->
+            <div class="flex items-center gap-4 interactive-element" onclick="showSection('home')">
+                <div class="w-10 h-10 bg-black dark:bg-signal-500 rounded-lg flex items-center justify-center text-white dark:text-black font-bold font-mono text-xl shadow-xl">
+                    B
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-sm font-extrabold tracking-tight text-gray-900 dark:text-white uppercase leading-none">BioMol<span class="text-signal-500">.AI</span></span>
+                    <span class="text-[10px] font-mono text-gray-400 dark:text-gray-500 tracking-[0.2em] uppercase mt-1">Studio Edition</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-8">
+                <button onclick="showSection('home')" class="interactive-element text-[11px] font-bold uppercase tracking-widest text-gray-500 hover:text-signal-600 dark:text-gray-400 dark:hover:text-signal-400 transition-colors hidden sm:block">Dashboard</button>
+                
+                <div class="h-5 w-px bg-gray-200 dark:bg-zinc-800 hidden sm:block"></div>
+
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="interactive-element p-2.5 rounded-full bg-white/50 dark:bg-zinc-900/50 border border-gray-200 dark:border-zinc-800 text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white transition-all hover:scale-105 shadow-sm">
+                    <svg id="sun-icon" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    <svg id="moon-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
+        
+        <!-- SECTION: DASHBOARD -->
+        <div id="section-home" class="py-16 max-w-6xl mx-auto">
+            <div class="mb-24 animate-slide-up">
+                <div class="inline-flex items-center gap-2 mb-8 border border-gray-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 px-4 py-1.5 rounded-full backdrop-blur-sm shadow-sm">
+                    <span class="w-2 h-2 rounded-full bg-signal-500 animate-pulse"></span>
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-gray-500 dark:text-gray-400 font-semibold">System v6.0 // Online</span>
+                </div>
+                
+                <h1 class="text-7xl sm:text-8xl font-extrabold text-gray-900 dark:text-white tracking-tighter mb-8 leading-[1.1]">
+                    Code of <br />
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-signal-600 to-blue-600 dark:from-signal-400 dark:to-blue-400">Life.</span>
+                </h1>
+                
+                <p class="text-xl text-gray-600 dark:text-gray-400 max-w-3xl leading-relaxed font-light">
+                    Advanced structural prediction and genomic analysis tools. Built for precision, speed, and biological discovery.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 animate-slide-up" style="animation-delay: 150ms;">
+                <!-- Protein Card -->
+                <div onclick="showSection('protein')" class="tech-panel tech-card p-10 rounded-2xl cursor-none interactive-element group relative overflow-hidden h-80 flex flex-col justify-between border border-transparent dark:border-zinc-800">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-signal-500/5 rounded-full blur-3xl group-hover:bg-signal-500/10 transition-colors duration-500"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="p-3 bg-gray-100 dark:bg-zinc-800 rounded-xl text-gray-900 dark:text-white">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                            </div>
+                            <svg class="w-6 h-6 text-gray-300 dark:text-zinc-700 group-hover:text-signal-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </div>
+                        <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-2 group-hover:text-signal-500 transition-colors">Protein Folding</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 font-mono tracking-wide">ESMFold API • Physicochemical Analysis</p>
+                    </div>
+                </div>
+
+                <!-- DNA Card -->
+                <div onclick="showSection('dna')" class="tech-panel tech-card p-10 rounded-2xl cursor-none interactive-element group relative overflow-hidden h-80 flex flex-col justify-between border border-transparent dark:border-zinc-800">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl group-hover:bg-purple-500/10 transition-colors duration-500"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="flex justify-between items-start mb-6">
+                            <div class="p-3 bg-gray-100 dark:bg-zinc-800 rounded-xl text-gray-900 dark:text-white">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                            <svg class="w-6 h-6 text-gray-300 dark:text-zinc-700 group-hover:text-purple-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </div>
+                        <h3 class="text-3xl font-bold text-gray-900 dark:text-white mb-2 group-hover:text-purple-500 transition-colors">Genomics</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 font-mono tracking-wide">Central Dogma • Sequence Analysis</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION: PROTEIN TOOL -->
+        <div id="section-protein" class="hidden h-full max-w-7xl mx-auto pb-20">
+            <div class="flex items-center justify-between mb-10 animate-fade-in">
+                <button onclick="showSection('home')" class="interactive-element flex items-center text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-black dark:hover:text-white transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    Back
+                </button>
+                <div class="flex items-center gap-3">
+                    <span class="w-2 h-2 rounded-full bg-signal-500 animate-pulse"></span>
+                    <span class="text-xs font-mono font-bold text-gray-500 dark:text-gray-400">MODULE: PROTEIN</span>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
+                <div class="lg:col-span-4 space-y-8 animate-slide-up" style="animation-delay: 100ms;">
+                    <div class="tech-panel rounded-xl p-8 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-signal-500"></div>
+                        <div class="space-y-6 mt-2">
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3 font-mono">Sample Selection</label>
+                                <div class="custom-select-wrapper interactive-element">
+                                    <select id="prot-sample" onchange="loadProteinSample()" class="input-surface w-full p-4 rounded-lg text-sm font-medium outline-none appearance-none cursor-none interactive-element hover:border-signal-500 transition-colors">
+                                        <option value="custom" selected>Custom Sequence</option>
+                                        <option value="PETase">Plastic degradation (PETase)</option>
+                                        <option value="Antifreeze">Antifreeze Protein</option>
+                                        <option value="Insulin">Human Insulin</option>
+                                        <option value="Hemoglobin">Hemoglobin Subunit Alpha</option>
+                                        <option value="Lysozyme">Lysozyme C (Chicken)</option>
+                                        <option value="GFP_Prot">Green Fluorescent Protein</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3 font-mono">Raw Sequence Data</label>
+                                <textarea id="prot-input" rows="8" placeholder="> Paste sequence here (Ctrl+Enter to fold)..." class="input-surface interactive-element w-full p-4 text-xs font-mono rounded-lg outline-none resize-y placeholder-gray-400 cursor-none hover:border-signal-500 transition-colors"></textarea>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4 pt-2">
+                                <button id="analyze-btn" onclick="analyzeProteinStats()" class="interactive-element w-full py-4 rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm flex justify-center items-center bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 transition-colors cursor-none">
+                                    Analyze
+                                </button>
+                                <button id="prot-btn" onclick="predictStructure()" class="interactive-element btn-tech w-full py-4 rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm flex justify-center items-center cursor-none">
+                                    Fold 3D
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Stats Card -->
+                    <div id="prot-stats" class="hidden tech-panel rounded-xl p-8 animate-fade-in">
+                        <div class="grid grid-cols-2 gap-6 mb-8">
+                             <div class="p-4 bg-gray-50 dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800">
+                                 <div class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">Mol Weight</div>
+                                 <div class="text-sm font-bold text-gray-900 dark:text-white truncate font-mono" id="p-mw">0 Da</div>
+                             </div>
+                             <div class="p-4 bg-gray-50 dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800">
+                                 <div class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">Isoelectric Pt</div>
+                                 <div class="text-sm font-bold text-gray-900 dark:text-white font-mono" id="p-pi">0.0</div>
+                             </div>
+                             <div class="p-4 bg-gray-50 dark:bg-zinc-900 rounded-lg col-span-2 border border-gray-200 dark:border-zinc-800">
+                                 <div class="flex justify-between items-center mb-1">
+                                     <div class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Extinction Coeff.</div>
+                                     <div class="text-[9px] bg-gray-200 dark:bg-zinc-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">280nm</div>
+                                 </div>
+                                 <div class="text-sm font-bold text-gray-900 dark:text-white font-mono"><span id="p-ext">0</span> <span class="text-[10px] font-normal text-gray-500">M⁻¹ cm⁻¹</span></div>
+                             </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="w-full h-2 bg-gray-100 dark:bg-zinc-800 rounded-full flex overflow-hidden">
+                                <div id="bar-hydro" class="h-full bg-amber-400" style="width: 0%"></div>
+                                <div id="bar-charged" class="h-full bg-rose-500" style="width: 0%"></div>
+                                <div id="bar-polar" class="h-full bg-sky-500" style="width: 0%"></div>
+                            </div>
+                            <div class="flex justify-between text-[9px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 font-mono">
+                                <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-amber-400 mr-2"></span> Hydro</span>
+                                <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-rose-500 mr-2"></span> Charge</span>
+                                <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-sky-500 mr-2"></span> Polar</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="prot-msg" class="hidden p-4 rounded-lg text-xs font-mono border-l-2 border-l-signal-500 tech-panel text-gray-700 dark:text-gray-300"></div>
+                </div>
+
+                <!-- Viewer -->
+                <div class="lg:col-span-8 animate-slide-up" style="animation-delay: 200ms;">
+                    <div class="tech-panel rounded-xl p-1.5 h-full flex flex-col shadow-sm relative group">
+                        <div class="px-6 py-4 flex justify-between items-center border-b border-gray-100 dark:border-zinc-800 mb-1 relative z-10">
+                            <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse-glow"></span> 3D Viewport
+                            </span>
+                            <div class="flex gap-3 text-[9px] font-bold text-gray-400 uppercase tracking-wider font-mono">
+                                <span class="text-blue-600 dark:text-blue-400">High</span>
+                                <span class="text-teal-500 dark:text-teal-400">Med</span>
+                                <span class="text-yellow-500 dark:text-yellow-400">Low</span>
+                            </div>
+                        </div>
+                        <div id="viewer-container" class="mol-container flex-grow rounded-lg relative z-10 interactive-element cursor-none">
+                             <div class="absolute inset-0 flex items-center justify-center text-gray-300 dark:text-zinc-800 pointer-events-none">
+                                 <div class="text-center">
+                                     <div class="text-7xl mb-4 opacity-10 font-mono font-light tracking-tighter">NULL</div>
+                                     <span class="text-[10px] font-bold uppercase tracking-widest opacity-40">Awaiting Input</span>
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SECTION: DNA TOOL -->
+        <div id="section-dna" class="hidden h-full max-w-6xl mx-auto pb-20">
+            <div class="flex items-center justify-between mb-8 animate-fade-in">
+                <button onclick="showSection('home')" class="interactive-element flex items-center text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-black dark:hover:text-white transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    Back to Dashboard
+                </button>
+                <div class="flex items-center gap-3">
+                    <span class="w-1.5 h-1.5 rounded-full bg-signal-500 animate-pulse"></span>
+                    <span class="text-xs font-mono font-bold text-gray-500 dark:text-gray-400">MODULE: GENOMICS</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Left: Input & Analysis -->
+                <div class="space-y-8 animate-slide-up" style="animation-delay: 100ms;">
+                    <div class="tech-panel rounded-xl p-8 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-1 bg-purple-500"></div>
+                        <div class="space-y-6 mt-2">
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3 font-mono">Sample Selection</label>
+                                <div class="custom-select-wrapper interactive-element">
+                                    <select id="dna-sample" onchange="loadDNASample()" class="input-surface w-full p-4 rounded-lg text-sm font-medium outline-none appearance-none cursor-none interactive-element hover:border-purple-500 transition-colors">
+                                        <option value="custom" selected>Custom Sequence</option>
+                                        <option value="Insulin">Human Insulin Gene</option>
+                                        <option value="GFP">Green Fluorescent Protein</option>
+                                        <option value="Hemoglobin_Beta">Hemoglobin Beta (HBB)</option>
+                                        <option value="TP53">TP53 Tumor Suppressor</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-3 font-mono">DNA Sequence</label>
+                                <textarea id="dna-input" rows="8" placeholder="ATCG..." class="input-surface interactive-element w-full p-4 text-xs font-mono rounded-lg outline-none resize-y uppercase cursor-none hover:border-purple-500 transition-colors"></textarea>
+                            </div>
+                            <button onclick="analyzeDNA()" class="interactive-element btn-tech w-full py-4 rounded-lg text-xs font-bold uppercase tracking-wider shadow-sm flex justify-center items-center dark:bg-purple-600 dark:hover:bg-purple-500 dark:text-white cursor-none">
+                                Execute Analysis
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Stats -->
+                    <div id="dna-stats" class="hidden tech-panel rounded-xl p-8 animate-slide-up">
+                         <div class="grid grid-cols-2 gap-6">
+                             <div class="p-4 bg-gray-50 dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800">
+                                 <div class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">GC Content</div>
+                                 <div class="text-base font-bold text-signal-600 dark:text-signal-400 font-mono" id="stat-gc">0%</div>
+                             </div>
+                             <div class="p-4 bg-gray-50 dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800">
+                                 <div class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">Melting Temp</div>
+                                 <div class="text-base font-bold text-purple-600 dark:text-purple-400 font-mono" id="stat-tm">0°C</div>
+                             </div>
+                             <div class="p-4 bg-gray-50 dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800">
+                                 <div class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">Base Pairs</div>
+                                 <div class="text-base font-bold text-gray-900 dark:text-white font-mono" id="stat-len">0</div>
+                             </div>
+                             <div class="p-4 bg-gray-50 dark:bg-zinc-900 rounded-lg border border-gray-200 dark:border-zinc-800">
+                                 <div class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase mb-1">Mol Weight</div>
+                                 <div class="text-base font-bold text-gray-900 dark:text-white font-mono" id="stat-mw">0</div>
+                             </div>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- Right: Results -->
+                <div class="space-y-8 animate-slide-up" style="animation-delay: 200ms;">
+                    <div class="tech-panel rounded-xl p-8 h-full flex flex-col shadow-sm">
+                        <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-8 font-mono">Central Dogma Output</h3>
+                        <div class="space-y-10 flex-grow">
+                            <!-- RNA -->
+                            <div class="relative pl-8 border-l border-gray-200 dark:border-zinc-800 group">
+                                <div class="absolute -left-[4px] top-0 w-2 h-2 rounded-full bg-gray-400"></div>
+                                <label class="text-[10px] font-bold text-gray-600 dark:text-gray-400 mb-3 block tracking-wider uppercase font-mono">Transcription (RNA)</label>
+                                <div id="res-rna" class="text-xs font-mono text-gray-600 dark:text-gray-300 break-all bg-gray-50 dark:bg-zinc-950 p-4 rounded-lg border border-gray-200 dark:border-zinc-800 min-h-[60px]">
+                                    <span class="text-gray-400 dark:text-zinc-700 italic">Awaiting input...</span>
+                                </div>
+                            </div>
+                            <!-- Protein -->
+                            <div class="relative pl-8 border-l border-signal-200 dark:border-signal-900 group">
+                                <div class="absolute -left-[4px] top-0 w-2 h-2 rounded-full bg-signal-500"></div>
+                                <label class="text-[10px] font-bold text-signal-600 dark:text-signal-400 mb-3 block tracking-wider uppercase font-mono">Translation (Protein)</label>
+                                <div id="res-protein" class="text-xs font-mono text-gray-600 dark:text-gray-300 break-all bg-gray-50 dark:bg-zinc-950 p-4 rounded-lg border border-gray-200 dark:border-zinc-800 mb-6 min-h-[60px]">
+                                    <span class="text-gray-400 dark:text-zinc-700 italic">Awaiting input...</span>
+                                </div>
+                                <button id="btn-transfer" onclick="transferToFolder()" class="hidden w-full interactive-element text-xs font-bold text-signal-700 bg-signal-50 border border-signal-200 hover:bg-signal-100 py-3 rounded-lg shadow-sm transition-all items-center justify-center gap-2 dark:bg-signal-900/30 dark:border-signal-800 dark:text-signal-400 dark:hover:bg-signal-900/50 cursor-none">
+                                    <span>Simulate Folding</span> <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                                </button>
+                            </div>
+                            <div id="func-hints" class="hidden mt-6 pt-6 border-t border-gray-200 dark:border-zinc-800">
+                                <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4 font-mono">Markers</h4>
+                                <ul id="marker-list" class="space-y-3"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="relative z-10 w-full py-6 text-center border-t border-gray-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-sm">
+        <p class="text-[10px] font-mono text-gray-400 uppercase tracking-widest">BioMolAI v6.0 • Status: <span class="text-signal-500">Operational</span></p>
+    </footer>
+
+    <script>
+        // --- REACTIVE BACKGROUND (Proximity Only) ---
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let dots = [];
+        const DOT_SPACING = 40; 
+        let mouse = { x: -1000, y: -1000 };
+
+        function initCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            createDots();
+        }
+
+        function createDots() {
+            dots = [];
+            for (let x = 0; x < width; x += DOT_SPACING) {
+                for (let y = 0; y < height; y += DOT_SPACING) {
+                    dots.push({ x, y });
+                }
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            const isDark = document.documentElement.classList.contains('dark');
+            
+            const baseDotColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+            
+            dots.forEach(dot => {
+                let size = 1.5;
+                let color = baseDotColor;
+
+                const distMouse = Math.hypot(dot.x - mouse.x, dot.y - mouse.y);
+                if (distMouse < 150) {
+                    const scale = (150 - distMouse) / 150;
+                    size += scale * 2;
+                    if(isDark) color = `rgba(34, 197, 94, ${0.3 + scale * 0.7})`;
+                    else color = `rgba(34, 197, 94, ${0.2 + scale * 0.5})`;
+                }
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(dot.x, dot.y, size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        window.addEventListener('resize', initCanvas);
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        initCanvas();
+        animate();
+
+        // --- CUSTOM CURSOR LOGIC ---
+        const cursorDot = document.getElementById('cursor-dot');
+        const cursorOutline = document.getElementById('cursor-outline');
+
+        window.addEventListener('mousemove', (e) => {
+            const posX = e.clientX;
+            const posY = e.clientY;
+
+            cursorDot.style.left = `${posX}px`;
+            cursorDot.style.top = `${posY}px`;
+
+            // Slight lag for organic feel
+            cursorOutline.animate({
+                left: `${posX}px`,
+                top: `${posY}px`
+            }, { duration: 500, fill: "forwards" });
+        });
+
+        document.querySelectorAll('.interactive-element, button, a, input, textarea, select').forEach(el => {
+            el.addEventListener('mouseenter', () => document.body.classList.add('hovering'));
+            el.addEventListener('mouseleave', () => document.body.classList.remove('hovering'));
+        });
+
+        // --- THEME ---
+        const themeBtn = document.getElementById('theme-toggle');
+        const html = document.documentElement;
+        let currentPdbData = null;
+
+        function initTheme() {
+            if(localStorage.getItem('theme') === 'dark') {
+                html.classList.add('dark');
+                document.getElementById('sun-icon').classList.remove('hidden');
+            } else {
+                document.getElementById('moon-icon').classList.remove('hidden');
+            }
+        }
+        
+        themeBtn.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            const isDark = html.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            document.getElementById('sun-icon').classList.toggle('hidden', !isDark);
+            document.getElementById('moon-icon').classList.toggle('hidden', isDark);
+            
+            if (currentPdbData) render3D(currentPdbData);
+        });
+
+        initTheme();
+
+        // --- APP LOGIC ---
+        const SAMPLES_PROT = {
+            "PETase": "MGSSHHHHHHSSGLVPRGSHMRGPNPTAASLEASAGPFTVRSFTVSRPSGYGAGTVYYPTNAGGTVGAIAIVPGYTARQSSIKWWGPRLASHGFVVITIDTNSTLDQPSSRSSQQMAALRQVASLNGTSSSPIYGKVDTARMGVMGWSMGGGGSLISAANNPSLKAAAPQAPWDSSTNFSSVTVPTLIFACENDSIAPVNSSALPIYDSMSRNAKQFLEINGGSHSCANSGNSNQALIGKKGVAWMKRFMDNDTRYSTFACENPNSTRVSDFRTANCSLEDPAANKARKEAELAAATAEQ",
+            "Antifreeze": "QCTGGADCTSCTGACTGCGNCPNAVTCTNSQHCVKANTCTGSTDCNTAQTCTNSKDCFEANTCTDSTNCYKATACTNSSGCPGH",
+            "Insulin": "MALWMRLLPLLALLALWGPDPAAAFVNQHLCGSHLVEALYLVCGERGFFYTPKTRREAEDLQVGQVELGGGPGAGSLQPLALEGSLQKRGIVEQCCTSICSLYQLENYCN",
+            "Hemoglobin": "MVLSPADKTNVKAAWGKVGAHAGEYGAEALERMFLSFPTTKTYFPHFDLSHGSAQVKGHGKKVADALTNAVAHVDDMPNALSALSDLHAHKLRVDPVNFKLLSHCLLVTLAAHLPAEFTPAVHASLDKFLASVSTVLTSKYR",
+            "Lysozyme": "MRSLLILVLCFLPLAALGKVYGRCELAAAMKRHGLDNYRGYSLGNWVCAAKFESNFNTQATNRNTDGSTDYGILQINSRWWCNDGRTPGSRNLCNIPCSALLSSDITASVNCAKKIVSDGNGMNAWVAWRNRCKGTDVQAWIRGCRL",
+            "GFP_Prot": "MSKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTLVTTFSYGVQCFSRYPDHMKQHDFFKSAMPEGYVQERTIFFKDDGNYKTRAEVKFEGDTLVNRIELKGIDFKEDGNILGHKLEYNYNSHNVYIMADKQKNGIKVNFKIRHNIEDGSVQLADHYQQNTPIGDGPVLLPDNHYLSTQSALSKDPNEKRDHMVLLEFVTAAGITHGMDELYK"
+        };
+        const SAMPLES_DNA = {
+            "Insulin": "ATGGCCCTGTGGATGCGCCTCCTGCCCCTGCTGGCGCTGCTGGCCCTCTGGGGACCTGACCCAGCCGCAGCCTTTGTGAACCAACACCTGTGCGGCTCACACCTGGTGGAAGCTCTCTACCTAGTGTGCGGGGAACGAGGCTTCTTCTACACACCCAAGACCCGCCGGGAGGCAGAGGACCTGCAGGTGGGGCAGGTGGAGCTGGGCGGGGGCCCTGGTGCAGGCAGCCTGCAGCCCTTGGCCCTGGAGGGGTCCCTGCAGAAGCGTGGCATTGTGGAACAATGCTGTACCAGCATCTGCTCCCTCTACCAGCTGGAGAACTACTGCAACTAG",
+            "GFP": "ATGAGTAAAGGAGAAGAACTTTTCACTGGAGTTGTCCCAATTCTTGTTGAATTAGATGGTGATGTTAATGGGCACAAATTTTCTGTCAGTGGAGAGGGTGAAGGTGATGCAACATACGGAAAACTTACCCTTAAATTTATTTGCACTACTGGAAAACTACCTGTTCCATGGCCAACACTTGTCACTACTTTCGGTTATGGTGTTCAATGCTTTGCGAGATACCCAGATCATATGAAACAGCATGACTTTTTCAAGAGTGCCATGCCCGAAGGTTATGTACAGGAAAGAACTATATTTTTCAAAGATGACGGGAACTACAAGACACGTGCTGAAGTCAAGTTTGAAGGTGATACCCTTGTTAATAGAATCGAGTTAAAAGGTATTGATTTTAAAGAAGATGGAAACATTCTTGGACACAAATTGGAATACAACTATAACTCACACAATGTATACATCATGGCAGACAAACAAAAGAATGGAATCAAAGTTAACTTCAAAATTAGACACAACATTGAAGATGGAAGCGTTCAACTAGCAGACCATTATCAACAAAATACTCCAATTGGCGATGGCCCTGTCCTTTTACCAGACAACCATTACCTGTCCACACAATCTGCCCTTTCGAAAGATCCCAACGAAAAGAGAGACCACATGGTCCTTCTTGAGTTTGTAACAGCTGCTGGGATTACACATGGCATGGATGAACTATACAAATAA",
+            "Hemoglobin_Beta": "ATGGTGCACCTGACTCCTGAGGAGAAGTCTGCCGTTACTGCCCTGTGGGGCAAGGTGAACGTGGATGAAGTTGGTGGTGAGGCCCTGGGCAGGCTGCTGGTGGTCTACCCTTGGACCCAGAGGTTCTTTGAGTCCTTTGGGGATCTGTCCACTCCTGATGCTGTTATGGGCAACCCTAAGGTGAAGGCTCATGGCAAGAAAGTGCTCGGTGCCTTTAGTGATGGCCTGGCTCACCTGGACAACCTCAAGGGCACCTTTGCCACACTGAGTGAGCTGCACTGTGACAAGCTGCACGTGGATCCTGAGAACTTCAGGCTCCTGGGCAACGTGCTGGTCTGTGTGCTGGCCCATCACTTTGGCAAAGAATTCACCCCACCAGTGCAGGCTGCCTATCAGAAAGTGGTGGCTGGTGTGGCTAATGCCCTGGCCCACAAGTATCACTAAGCTCGCTTTCTTGCTGTCCAATTTCTATTAAAGGTTCCTTTGTTCCCTAAGTCCAACTACTAAACTGGGGGATATTATGAAGGGCCTTGAGCATCTGGATTCTGCCTAATAAAAAACATTTATTTTCATTGC",
+            "TP53": "ATGGAGGAGCCGCAGTCAGATCCTAGCGTCGAGCCCCCTCTGAGTCAGGAAACATTTTCAGACCTATGGAAACTACTTCCTGAAAACAACGTTCTGTCCCCCTTGCCGTCCCAAGCAATGGATGATTTGATGCTGTCCCCGGACGATATTGAACAATGGTTCACTGAAGACCCAGGTCCAGATGAAGCTCCCAGAATGCCAGAGGCTGCTCCCCCCGTGGCCCCTGCACCAGCAGCTCCTACACCGGCGGCCCCTGCACCAGCCCCCTCCTGGCCCCTGTCATCTTCTGTCCCTTCCCAGAAAACCTACCAGGGCAGCTACGGTTTCCGTCTGGGCTTCTTGCATTCTGGGACAGCCAAGTCTGTGACTTGCACGTACTCCCCTGCCCTCAACAAGATGTTTTGCCAACTGGCCAAGACCTGCCCTGTGCAGCTGTGGGTTGATTCCACACCCCCGCCCGGCACCCGCGTCCGCGCCATGGCCATCTACAAGCAGTCACAGCACATGACGGAGGTTGTGAGGCGCTGCCCCCACCATGAGCGCTGCTCAGATAGCGATGGTCTGGCCCCTCCTCAGCATCTTATCCGAGTGGAAGGAAATTTGCGTGTGGAGTATTTGGATGACAGAAACACTTTTCGACATAGTGTGGTGGTGCCCTATGAGCCGCCTGAGGTTGGCTCTGACTGTACCACCATCCACTACAACTACATGTGTAACAGTTCCTGCATGGGCGGCATGAACCGGAGGCCCATCCTCACCATCATCACACTGGAAGACTCCAGTGGTAATCTACTGGGACGGAACAGCTTTGAGGTGCGTGTTTGTGCCTGTCCTGGGAGAGACCGGCGCACAGAGGAAGAGAATCTCCGCAAGAAAGGGGAGCCTCACCACGAGCTGCCCCCAGGGAGCACTAAGCGAGCACTGCCCAACAACACCAGCTCCTCTCCCCAGCCAAAGAAGAAACCACTGGATGGAGAATATTTCACCCTTCAGATCCGTGGGCGTGAGCGCTTCGAGATGTTCCGAGAGCTGAATGAGGCCTTGGAACTCAAGGATGCCCAGGCTGGGAAGGAGCCAGGGGGGAGCAGGGCTCACTCCAGCCACCTGAAGTCCAAAAAGGGTCAGTCTACCTCCCGCCATAAAAAACTCATGTTCAAGACAGAAGGGCCTGACTCAGACTGA"
+        };
+        
+        const CODON_TABLE={'ATA':'I','ATC':'I','ATT':'I','ATG':'M','ACA':'T','ACC':'T','ACG':'T','ACT':'T','AAC':'N','AAT':'N','AAA':'K','AAG':'K','AGC':'S','AGT':'S','AGA':'R','AGG':'R','CTA':'L','CTC':'L','CTG':'L','CTT':'L','CCA':'P','CCC':'P','CCG':'P','CCT':'P','CAC':'H','CAT':'H','CAA':'Q','CAG':'Q','CGA':'R','CGC':'R','CGG':'R','CGT':'R','GTA':'V','GTC':'V','GTG':'V','GTT':'V','GCA':'A','GCC':'A','GCG':'A','GCT':'A','GAC':'D','GAT':'D','GAA':'E','GAG':'E','GGA':'G','GGC':'G','GGG':'G','GGT':'G','TCA':'S','TCC':'S','TCG':'S','TCT':'S','TTC':'F','TTT':'F','TTA':'L','TTG':'L','TAC':'Y','TAT':'Y','TAA':'_','TAG':'_','TGC':'C','TGT':'C','TGA':'_','TGG':'W'};
+        const AA_MASS={'A':71.08,'R':156.19,'N':114.10,'D':115.09,'C':103.14,'Q':128.13,'E':129.12,'G':57.05,'H':137.14,'I':113.16,'L':113.16,'K':128.17,'M':131.19,'F':147.18,'P':97.12,'S':87.08,'T':101.11,'W':186.21,'Y':163.18,'V':99.13};
+        const AA_TYPE={'A':'hydro','V':'hydro','I':'hydro','L':'hydro','M':'hydro','F':'hydro','W':'hydro','P':'hydro','R':'charged','H':'charged','K':'charged','D':'charged','E':'charged','S':'polar','T':'polar','N':'polar','Q':'polar','Y':'polar','C':'polar','G':'polar'};
+
+        function showSection(id) {
+            ['home','protein','dna'].forEach(s => document.getElementById('section-'+s).classList.add('hidden'));
+            document.getElementById('section-'+id).classList.remove('hidden');
+            const el = document.getElementById('section-'+id);
+            el.classList.remove('animate-slide-up');
+            void el.offsetWidth;
+            el.classList.add('animate-slide-up');
+            window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        function loadProteinSample() {
+            const val = document.getElementById('prot-sample').value;
+            document.getElementById('prot-input').value = (val === 'custom') ? '' : SAMPLES_PROT[val];
+        }
+
+        function analyzeProteinStats() {
+            const seq = document.getElementById('prot-input').value.toUpperCase().replace(/[^A-Z]/g,'');
+            if(seq.length < 5) return alert("Sequence too short");
+            
+            let mass = 18.02;
+            let nTrp=0, nTyr=0, nHydro=0, nPolar=0, nCharged=0;
+            let nPos=0, nNeg=0;
+
+            for(let aa of seq) {
+                if(AA_MASS[aa]) mass += AA_MASS[aa];
+                if(aa==='W') nTrp++;
+                if(aa==='Y') nTyr++;
+                if(AA_TYPE[aa]==='hydro') nHydro++;
+                else if(AA_TYPE[aa]==='charged') { nCharged++; if('RHK'.includes(aa)) nPos++; else nNeg++; }
+                else nPolar++;
+            }
+            
+            let pI = 7.0 + (nPos - nNeg) * 0.5;
+            if(pI < 4) pI = 4; if(pI > 10) pI = 10;
+
+            const mwEl = document.getElementById('p-mw');
+            const extEl = document.getElementById('p-ext');
+            const piEl = document.getElementById('p-pi');
+            
+            if(mwEl) mwEl.textContent = mass.toFixed(1) + " Da";
+            if(extEl) extEl.textContent = ((nTrp*5500)+(nTyr*1490)).toLocaleString();
+            if(piEl) piEl.textContent = pI.toFixed(1) + " (pH)";
+            
+            const len = seq.length;
+            document.getElementById('bar-hydro').style.width = (nHydro/len*100)+'%';
+            document.getElementById('bar-charged').style.width = (nCharged/len*100)+'%';
+            document.getElementById('bar-polar').style.width = (nPolar/len*100)+'%';
+            
+            document.getElementById('prot-stats').classList.remove('hidden');
+        }
+
+        async function predictStructure() {
+            const btn = document.getElementById('prot-btn');
+            const seq = document.getElementById('prot-input').value.toUpperCase().replace(/[^A-Z]/g,'');
+            const msg = document.getElementById('prot-msg');
+            
+            if(seq.length < 10) return alert("Sequence min 10 residues");
+            
+            btn.disabled = true;
+            const orig = btn.innerHTML;
+            btn.innerHTML = 'Folding...';
+            
+            try {
+                analyzeProteinStats();
+                const res = await fetch('https://api.esmatlas.com/foldSequence/v1/pdb/', { method: 'POST', body: seq });
+                if(!res.ok) throw new Error("API Busy");
+                const pdb = await res.text();
+                currentPdbData = pdb;
+                render3D(pdb);
+                msg.innerHTML = "Structure generated successfully.";
+                msg.classList.remove('hidden');
+                document.getElementById('dl-pdb-btn').classList.remove('hidden');
+            } catch(e) {
+                alert("Folding failed. API might be busy.");
+            }
+            btn.disabled = false;
+            btn.innerHTML = orig;
+        }
+
+        function render3D(pdb) {
+            const el = document.getElementById('viewer-container');
+            el.innerHTML = '';
+            const isDark = document.documentElement.classList.contains('dark');
+            const bg = isDark ? '#0a0a0c' : '#ffffff';
+            let v = $3Dmol.createViewer(el, { backgroundColor: bg });
+            v.addModel(pdb, "pdb");
+            v.getModel(0).setStyle({cartoon: { colorfunc: atom => {
+                let b = atom.b <= 1 ? atom.b*100 : atom.b;
+                return b < 50 ? "OrangeRed" : b < 70 ? "Gold" : b < 90 ? "MediumTurquoise" : "Blue";
+            }}});
+            v.zoomTo();
+            v.render();
+            v.zoom(1.2, 1000);
+        }
+
+        function loadDNASample() {
+            const val = document.getElementById('dna-sample').value;
+            document.getElementById('dna-input').value = (val === 'custom') ? '' : SAMPLES_DNA[val];
+        }
+
+        function analyzeDNA() {
+            const raw = document.getElementById('dna-input').value.toUpperCase().replace(/\s/g,'');
+            if(!/^[ATCG]+$/.test(raw)) return alert("Invalid DNA");
+            
+            const gc = (raw.match(/[CG]/g)||[]).length;
+            const gcP = (gc/raw.length*100).toFixed(1);
+            const tm = (64.9 + 41*(gc-16.4)/raw.length).toFixed(1);
+            
+            // Safety checks
+            const gcEl = document.getElementById('stat-gc');
+            const tmEl = document.getElementById('stat-tm');
+            const lenEl = document.getElementById('stat-len');
+            const mwEl = document.getElementById('stat-mw');
+
+            if(gcEl) gcEl.textContent = gcP+'%';
+            if(tmEl) tmEl.textContent = tm+'°C';
+            if(lenEl) lenEl.textContent = raw.length;
+            if(mwEl) mwEl.textContent = (raw.length*0.65).toFixed(1);
+            
+            document.getElementById('dna-stats').classList.remove('hidden');
+            
+            const rna = raw.replace(/T/g,'U');
+            document.getElementById('res-rna').textContent = rna;
+            
+            let prot = "";
+            for(let i=0; i<raw.length; i+=3) {
+                if(i+3>raw.length) break;
+                prot += CODON_TABLE[raw.substring(i,i+3)] || '?';
+            }
+            document.getElementById('res-protein').textContent = prot;
+            document.getElementById('btn-transfer').classList.remove('hidden');
+            document.getElementById('btn-transfer').classList.add('flex');
+            
+            const markers = [];
+            if(prot.includes('M')) markers.push("Start Codon (Methionine)");
+            if(prot.includes('_')) markers.push("Stop Codon (ORF End)");
+            
+            const list = document.getElementById('marker-list');
+            list.innerHTML = markers.map(m => `<li class="text-xs font-mono text-signal-500">• ${m}</li>`).join('');
+            if(markers.length) document.getElementById('func-hints').classList.remove('hidden');
+        }
+
+        function transferToFolder() {
+            const p = document.getElementById('res-protein').textContent;
+            showSection('protein');
+            document.getElementById('prot-sample').value = 'custom';
+            document.getElementById('prot-input').value = p.replace(/_/g,'');
+        }
+    </script>
+</body>
+</html>
