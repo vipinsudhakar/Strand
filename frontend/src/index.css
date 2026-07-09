@@ -1,0 +1,74 @@
+/* Self-hosted variable fonts (no CDN round-trip). */
+@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+
+@import "tailwindcss";
+
+/*
+ * Strand design tokens (v1 — light-only). Every value here is tunable; these are
+ * the locked Design Language defaults. Exposed to Tailwind via @theme, so they're
+ * usable as utilities (bg-paper, text-ink, font-display, ...) and as CSS vars.
+ */
+@theme {
+  /* --- Palette --------------------------------------------------------- */
+  --color-paper: #f7f6f3; /* warm off-white background */
+  --color-ink: #111110; /* near-black primary text */
+
+  /* graded neutrals for secondary text + hairline rules */
+  --color-ash-500: #6b6a64; /* secondary text */
+  --color-ash-300: #a3a19a; /* muted text */
+  --color-hairline: #e4e2dd; /* rules / borders */
+
+  /* the single restrained accent — links / active / emphasis, never a neon fill */
+  --color-accent: #1c6b47; /* deep botanical green */
+  --color-accent-soft: #2f8a60; /* lighter step for hover */
+
+  /* functional colors — used only where scientifically meaningful (later work).
+     the protein composition triad; pLDDT bands stay literal in the 3Dmol layer. */
+  --color-comp-hydrophobic: #b8763e;
+  --color-comp-charged: #3e6db8;
+  --color-comp-polar: #4f9d7a;
+
+  /* --- Type ------------------------------------------------------------ */
+  --font-display: "Fraunces Variable", ui-serif, Georgia, serif;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", monospace;
+
+  /* --- Motion (consumed later by Framer Motion + transition utilities) -- */
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1); /* expo-out, the house easing */
+  --duration-base: 600ms; /* durations live in the 400–800ms band */
+}
+
+@layer base {
+  :root {
+    /* fluid root rhythm — a confident clamp()-based scale */
+    font-size: clamp(15px, 0.9rem + 0.25vw, 17px);
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* sequences and raw data render in the monospace face by default */
+  code,
+  pre,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
+  }
+
+  /* honor the OS setting globally; Framer Motion variants get finer handling in #22 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
