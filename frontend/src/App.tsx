@@ -4,10 +4,11 @@ import { useState } from "react";
 import { Dashboard } from "./components/dashboard/Dashboard";
 import { Footer } from "./components/layout/Footer";
 import { Nav, type Section } from "./components/layout/Nav";
+import { ProteinTool } from "./components/protein/ProteinTool";
 import { Reveal } from "./motion/Reveal";
 import { sectionFade, sectionShift } from "./motion/variants";
 
-// Placeholder for tools not yet built (protein → items 15–18, dna → 19–21).
+// Placeholder for the DNA tool until items 19–21 build it.
 function Placeholder({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
     <section className="mx-auto max-w-5xl px-6 py-24 md:py-32">
@@ -27,7 +28,7 @@ function Placeholder({ eyebrow, title }: { eyebrow: string; title: string }) {
 function renderSection(section: Section, onNavigate: (s: Section) => void) {
   switch (section) {
     case "protein":
-      return <Placeholder eyebrow="Tool" title="Protein analysis & folding." />;
+      return <ProteinTool />;
     case "dna":
       return <Placeholder eyebrow="Tool" title="DNA & the central dogma." />;
     case "dashboard":
