@@ -41,3 +41,22 @@ export const staggerContainer: Variants = {
     transition: { staggerChildren: STAGGER, delayChildren: 0.05 },
   },
 };
+
+/** Section cross-fade for the App shell's AnimatePresence: the outgoing section
+ *  lifts away as the incoming one rises in. Pair with `mode="wait"`. */
+export const sectionShift: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: baseTransition },
+  exit: {
+    opacity: 0,
+    y: -12,
+    transition: { duration: DURATION.fast, ease: EASE_EXPO },
+  },
+};
+
+/** Opacity-only section transition for `prefers-reduced-motion`. */
+export const sectionFade: Variants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: DURATION.fast } },
+  exit: { opacity: 0, transition: { duration: DURATION.fast } },
+};

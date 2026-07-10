@@ -1,45 +1,63 @@
-import { motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useState } from "react";
 
-import { AnimatedNumber } from "./motion/AnimatedNumber";
-import { MagneticButton } from "./motion/MagneticButton";
+import { Footer } from "./components/layout/Footer";
+import { Nav, type Section } from "./components/layout/Nav";
 import { Reveal } from "./motion/Reveal";
-import { fadeUp } from "./motion/variants";
+import { sectionFade, sectionShift } from "./motion/variants";
 
-// Temporary smoke screen: exercises the design tokens + motion primitives.
-// Replaced by the real Nav / Dashboard shell in a later commit.
-export default function App() {
+// Placeholder for tools not yet built (protein → items 15–18, dna → 19–21).
+function Placeholder({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-8 px-6">
-      <Reveal stagger className="flex flex-col gap-6">
-        <motion.p
-          variants={fadeUp}
-          className="font-mono text-sm uppercase tracking-widest text-ash-500"
-        >
-          Strand
-        </motion.p>
-        <motion.h1
-          variants={fadeUp}
-          className="font-display text-6xl font-medium leading-tight text-ink"
-        >
-          Motion primitives are live.
-        </motion.h1>
-        <motion.p variants={fadeUp} className="font-sans text-lg text-ash-500">
-          Staggered reveals, count-up numbers, and a magnetic button — all
-          respecting reduced-motion.
-        </motion.p>
+    <section className="mx-auto max-w-5xl px-6 py-24 md:py-32">
+      <Reveal className="max-w-xl">
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-ash-500">
+          {eyebrow}
+        </p>
+        <h2 className="mt-6 font-display text-4xl text-ink md:text-5xl">{title}</h2>
+        <p className="mt-4 font-sans text-lg text-ash-500">
+          This tool is being wired up in the next batch of work.
+        </p>
       </Reveal>
+    </section>
+  );
+}
 
-      <Reveal className="flex items-baseline gap-3">
-        <AnimatedNumber
-          value={5808}
-          className="font-display text-5xl font-medium text-ink"
-        />
-        <span className="font-mono text-sm text-ash-500">Da · insulin MW</span>
-      </Reveal>
+function renderSection(section: Section) {
+  switch (section) {
+    case "protein":
+      return <Placeholder eyebrow="Tool" title="Protein analysis & folding." />;
+    case "dna":
+      return <Placeholder eyebrow="Tool" title="DNA & the central dogma." />;
+    case "dashboard":
+    default:
+      return <Placeholder eyebrow="Strand" title="A quiet workspace for sequences." />;
+  }
+}
 
-      <MagneticButton className="w-fit rounded-full border border-ink px-6 py-3 font-sans text-base font-medium text-ink">
-        Magnetic button
-      </MagneticButton>
-    </main>
+export default function App() {
+  const [section, setSection] = useState<Section>("dashboard");
+  const reduce = useReducedMotion();
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Nav active={section} onNavigate={setSection} />
+
+      <main className="flex-grow">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={section}
+            variants={reduce ? sectionFade : sectionShift}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+          >
+            {renderSection(section)}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+
+      <Footer />
+    </div>
   );
 }
