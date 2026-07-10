@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 
+import { Dashboard } from "./components/dashboard/Dashboard";
 import { Footer } from "./components/layout/Footer";
 import { Nav, type Section } from "./components/layout/Nav";
 import { Reveal } from "./motion/Reveal";
@@ -23,7 +24,7 @@ function Placeholder({ eyebrow, title }: { eyebrow: string; title: string }) {
   );
 }
 
-function renderSection(section: Section) {
+function renderSection(section: Section, onNavigate: (s: Section) => void) {
   switch (section) {
     case "protein":
       return <Placeholder eyebrow="Tool" title="Protein analysis & folding." />;
@@ -31,7 +32,7 @@ function renderSection(section: Section) {
       return <Placeholder eyebrow="Tool" title="DNA & the central dogma." />;
     case "dashboard":
     default:
-      return <Placeholder eyebrow="Strand" title="A quiet workspace for sequences." />;
+      return <Dashboard onLaunch={onNavigate} />;
   }
 }
 
@@ -52,7 +53,7 @@ export default function App() {
             animate="visible"
             exit="exit"
           >
-            {renderSection(section)}
+            {renderSection(section, setSection)}
           </motion.div>
         </AnimatePresence>
       </main>
