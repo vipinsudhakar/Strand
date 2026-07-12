@@ -1,4 +1,10 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+// In production the API is served from the same origin as the app (one Render
+// service), so requests go to relative "/api/...". In dev, Vite serves the app
+// on :5173 while the API runs on :8000. An explicit VITE_API_BASE_URL overrides
+// both — needed only if the two are ever deployed separately.
+const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ??
+  (import.meta.env.PROD ? "" : "http://localhost:8000");
 
 const CLIENT_ID_KEY = "strand_client_id";
 

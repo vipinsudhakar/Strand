@@ -1,0 +1,14 @@
+.git
+.gitignore
+HANDOFF.md
+legacy/
+
+# Built/installed artifacts — the image builds its own.
+**/node_modules
+**/dist
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/*.db
+**/.env
+backend/tests
