@@ -27,14 +27,14 @@ export function Dashboard({ onLaunch }: DashboardProps) {
           variants={fadeUp}
           className="mt-6 font-display text-4xl leading-[1.05] text-ink sm:text-5xl md:text-6xl"
         >
-          Protein and DNA analysis, done properly.
+          Sequence in, structure out.
         </motion.h1>
         <motion.p
           variants={fadeUp}
           className="mt-6 font-sans text-lg leading-relaxed text-ash-500"
         >
-          Real Biopython calculations, server-side structure prediction, and a
-          history that remembers — in one quiet, focused workspace.
+          Protein and DNA analysis. Biopython does the math, ESMFold does the
+          folding.
         </motion.p>
       </Reveal>
 
