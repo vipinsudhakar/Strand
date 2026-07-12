@@ -19,23 +19,29 @@ export default function App() {
     setSection("protein");
   };
 
+  // Sections remount on every switch (AnimatePresence key), so ProteinTool
+  // re-reads the seed each time it opens. Clear it on any *manual* navigation,
+  // or a past transfer would keep re-injecting its stale sequence forever.
+  const handleNavigate = (next: Section) => {
+    setProteinSeed("");
+    setSection(next);
+  };
+
   function renderSection() {
     switch (section) {
       case "protein":
-        // The section remounts on every switch (AnimatePresence key), so the
-        // seed is read fresh as the initial sequence each time protein opens.
         return <ProteinTool initialSequence={proteinSeed} />;
       case "dna":
         return <DnaTool onTransfer={handleTransfer} />;
       case "dashboard":
       default:
-        return <Dashboard onLaunch={setSection} />;
+        return <Dashboard onLaunch={handleNavigate} />;
     }
   }
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Nav active={section} onNavigate={setSection} />
+      <Nav active={section} onNavigate={handleNavigate} />
 
       <main className="flex-grow">
         <AnimatePresence mode="wait" initial={false}>

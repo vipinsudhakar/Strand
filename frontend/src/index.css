@@ -60,7 +60,18 @@
     font-family: var(--font-mono);
   }
 
-  /* honor the OS setting globally; Framer Motion variants get finer handling in #22 */
+  /* Keyboard focus: visible for keyboard users, invisible on mouse click.
+     Every interactive element here is a bare <button>, so this is the only
+     focus affordance in the app — without it, tabbing is untrackable. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* Covers CSS-driven motion (hover transitions, the arrow nudge). Framer
+     Motion is JS-driven and can't be reached from here — each motion component
+     checks useReducedMotion() itself and collapses to opacity-only/instant. */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

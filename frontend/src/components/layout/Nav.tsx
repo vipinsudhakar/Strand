@@ -23,7 +23,7 @@ export function Nav({ active, onNavigate }: NavProps) {
   const reduce = useReducedMotion();
 
   return (
-    <header className="sticky top-0 z-50 border-b border-hairline bg-paper/90 backdrop-blur-none">
+    <header className="sticky top-0 z-50 border-b border-hairline bg-paper">
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
         <button
           type="button"
@@ -33,7 +33,7 @@ export function Nav({ active, onNavigate }: NavProps) {
           Strand
         </button>
 
-        <ul className="flex items-center gap-8">
+        <ul className="flex items-center gap-6 sm:gap-8">
           {LINKS.map((link) => {
             const isActive = active === link.id;
             return (

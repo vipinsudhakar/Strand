@@ -25,7 +25,7 @@ export function Dashboard({ onLaunch }: DashboardProps) {
         </motion.p>
         <motion.h1
           variants={fadeUp}
-          className="mt-6 font-display text-5xl leading-[1.05] text-ink md:text-6xl"
+          className="mt-6 font-display text-4xl leading-[1.05] text-ink sm:text-5xl md:text-6xl"
         >
           Protein and DNA analysis, done properly.
         </motion.h1>
